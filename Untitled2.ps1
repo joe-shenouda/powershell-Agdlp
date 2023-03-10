@@ -1,35 +1,34 @@
-﻿Import-module ActiveDirectory 
--whatif
-$domain = Thompsonshotel.nl
-$group = Import-Csv -delimiter ";" -Path "C:\Scripts\groepen.csv" 
-#create active directory groups
- 
-ForEach ($item In $group) 
-    { 
-        $create_group = New-ADGroup -Name $item.GroupName -GroupCategory $item.GroupCategory -groupScope $item.GroupScope
-        Write-Host -ForegroundColor Green "Group $($item.GroupName) created!" 
-    }
-#add users to active directory groups
-$group | % 
-if($user.user = $user){} ForEach ($user in $group){Get-ADUser $item.GroupName -Group pCategory $item.GroupCategory  $group.user -identity $group Add-ADGroupMember -Member $_.UserName}
-else {write-host -ForegroundColor Red  "in prut not not valid"}
+Import-Module ActiveDirectory -WhatIf
 
-#create active directory groups folder on D drive
+$domain = "Thompsonshotel.nl"
+$group = Import-Csv -Delimiter ";" -Path "C:\Scripts\groepen.csv" 
 
-ForEach ($item In $group)
-    { 
-        $create_group = New-Item -ItemType directory -Path D:\$domain\$Group -Name $item.GroupName -GroupCategory $item.GroupCategory -groupScope Global.GroupScope
-        Write-Host -ForegroundColor Green "Folder $($item.GroupName) created!" 
-    }
-#add permissions on active directory groups folder on D drive
- (ForEach item in -Path D:\$domain ($grouppermission)
-    { 
-        $Acl = Get-Acl "D:\$domain"
-        $Ar = New-Object  system.security.accesscontrol.filesystemaccessrule("$group","Write","Read","execute","Allow")
-        $Acl.SetAccessRule($Ar)
-        Set-Acl "C:\$domain\$group" $Acl
-        Write-Host -ForegroundColor Green "permissions $($item.GroupName) added!" 
-    }  
+# Create Active Directory groups
+ForEach ($item In $group) { 
+    $create_group = New-ADGroup -Name $item.GroupName -GroupCategory $item.GroupCategory -GroupScope $item.GroupScope
+    Write-Host -ForegroundColor Green "Group $($item.GroupName) created!" 
+}
+
+# Add users to Active Directory groups
+ForEach ($user in $group) {
+    $memberOf = Get-ADUser -Identity $user -Properties MemberOf | Select-Object -ExpandProperty MemberOf
+    Add-ADGroupMember -Identity $user.GroupName -Members $memberOf
+}
+
+# Create Active Directory group folders on D drive
+ForEach ($item In $group) { 
+    $create_folder = New-Item -ItemType Directory -Path "D:\$domain\$($item.GroupName)" -Force
+    Write-Host -ForegroundColor Green "Folder $($item.GroupName) created!" 
+}
+
+# Add permissions to Active Directory group folders on D drive
+ForEach ($item in $group) { 
+    $Acl = Get-Acl "D:\$domain\$($item.GroupName)"
+    $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule($item.GroupName,"Write","ReadAndExecute","Allow")
+    $Acl.SetAccessRule($Ar)
+    Set-Acl "D:\$domain\$($item.GroupName)" $Acl
+    Write-Host -ForegroundColor Green "Permissions $($item.GroupName) added!" 
+}
     else 
     { Write-Host -ForegroundColor Red "permissions $($item.GroupName) failed" }
 
